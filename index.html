@@ -3,9 +3,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>SF2 Sequencer</title>
 <style>
-:root{--bg:#ecebf3;--pn:#fff;--ink:#1d1a2b;--mut:#6c6882;--ln:#d6d3e4;--ac:#e8a317;--k1:#f6f5fb;--k2:#e4e2ef;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1a1727;--pn:#252136;--ink:#ece9f7;--mut:#9892b3;--ln:#383350;--k1:#201c30;--k2:#171424;color-scheme:dark}}
-:root[data-theme="dark"]{--bg:#1a1727;--pn:#252136;--ink:#ece9f7;--mut:#9892b3;--ln:#383350;--k1:#201c30;--k2:#171424;color-scheme:dark}
+:root{--bg:#0d0e11;--pn:#14161b;--ink:#e9e6df;--mut:#868b97;--ln:#2a2e36;--ac:#d4a65a;--k1:#1b1e25;--k2:#0d0e11;color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+
+
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.4 "Avenir Next","Segoe UI",system-ui,sans-serif}
 header{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 14px;background:var(--pn);border-bottom:1px solid var(--ln)}
@@ -17,24 +17,38 @@ button{cursor:pointer}button:hover{border-color:var(--mut)}
 #play{background:var(--ac);border-color:var(--ac);color:#1d1a2b;font-weight:600;min-width:72px}
 input[type=number]{width:64px}
 #tn{width:52px}
-#pname{font:inherit;font-weight:600;font-size:15px;width:190px;color:var(--ink);background:transparent;border:1px solid transparent;border-radius:6px;padding:5px 8px}
+#pname{font:inherit;font-weight:600;font-size:15px;width:190px;color:var(--ink);background:transparent;border:1px solid transparent;border-radius:2px;padding:5px 8px}
 #pname:hover,#pname:focus{border-color:var(--ln);background:var(--k1)}
 main{display:grid;grid-template-columns:270px minmax(0,1fr);gap:12px;padding:12px 14px}
 aside{display:flex;flex-direction:column;gap:10px;min-width:0}
-.tr{display:flex;align-items:center;gap:6px;padding:6px 8px;border:1px solid var(--ln);border-radius:6px;background:var(--pn);cursor:pointer;margin-bottom:4px}
+.tr{display:flex;align-items:center;gap:6px;padding:6px 8px;border:1px solid var(--ln);border-radius:2px;background:var(--pn);cursor:pointer;margin-bottom:4px}
 .tr.on{border-color:var(--ink)}
-.tr i{width:10px;height:10px;border-radius:50%;flex:none}
+.tr i{width:10px;height:10px;border-radius:20%;flex:none}
 .tr span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tr button{padding:1px 7px}.tr .x{background:var(--ac);color:#1d1a2b;border-color:var(--ac)}
-#ed{display:flex;flex-direction:column;gap:8px;background:var(--pn);border:1px solid var(--ln);border-radius:8px;padding:10px}
+#ed{display:flex;flex-direction:column;gap:8px;background:var(--pn);border:1px solid var(--ln);border-radius:2px;padding:10px}
 #ed label{display:flex;flex-direction:column;gap:3px;color:var(--mut)}
 #ed select{width:100%}
-#roll{position:relative;overflow:auto;max-height:68vh;border:1px solid var(--ln);border-radius:8px;background:var(--pn)}
+#roll{position:relative;overflow:auto;max-height:68vh;border:1px solid var(--ln);border-radius:2px;background:var(--pn)}
 canvas{display:block}
 .rc{min-width:0}
-#vel{overflow:hidden;margin-top:8px;border:1px solid var(--ln);border-radius:8px;background:var(--pn)}
+#vel{overflow:hidden;margin-top:8px;border:1px solid var(--ln);border-radius:2px;background:var(--pn)}
 #ph{position:absolute;top:0;left:0;width:2px;background:var(--ac);pointer-events:none}
 p{color:var(--mut);margin:0 14px 10px;font-size:13px}
+body{background:radial-gradient(1100px 420px at 15% -8%,#1c2028,transparent 70%),var(--bg)}
+header{background:linear-gradient(#1a1d23,#13151a);border-bottom-color:#000;box-shadow:0 8px 24px #0007}
+button,select,input[type=number]{background:#1e2128;border-color:#323743;border-radius:1px}
+button:hover{background:#292d36;border-color:#4b5262;color:#fff}
+.tr{background:#14161b;border-radius:2px}
+.tr.on{background:#1b1e25;border-color:#3a3f4b;box-shadow:inset 3px 0 0 var(--ac)}
+#ed{background:#14161b;border-color:#262a32}
+#roll,#vel{border-color:#262a32;border-radius:1px;background:#0d0e11}
+#ph{background:var(--ac);box-shadow:0 0 10px #d4a65a99}
+#tb{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}
+#tb button{padding:3px 10px;font-size:13px}
+.seg{display:flex}.seg button{border-radius:0}.seg button:first-child{border-radius:1px 0 0 1px}.seg button:last-child{border-radius:0 1px 1px 0;margin-left:-1px}
+.seg .on{background:var(--ac);border-color:var(--ac);color:#14110a}
+#rd{min-width:70px;text-align:right;font:600 18px/1 ui-monospace,'SF Mono',Menlo,Consolas,monospace;color:var(--ac)}
 @media(max-width:800px){main{grid-template-columns:1fr}}
 </style></head><body>
 <header>
@@ -50,17 +64,17 @@ p{color:var(--mut);margin:0 14px 10px;font-size:13px}
 </header>
 <main>
 <aside><div id="tracks"></div><button id="add">Add track</button><div id="ed"></div></aside>
-<div class="rc"><div id="roll"><canvas id="cv"></canvas><div id="ph"></div></div><div id="vel"><canvas id="vc"></canvas></div></div>
+<div class="rc"><div id="tb"><div class="seg"><button id="mDraw" class="on">Draw</button><button id="mSel">Select</button></div><button data-k="all">Select all</button><button data-k="copy">Copy</button><button data-k="cut">Cut</button><button data-k="paste">Paste</button><button data-k="dup">Duplicate</button><button data-k="del">Delete</button><span class="sp"></span><span id="rd" title="Pitch">–</span></div><div id="roll"><canvas id="cv"></canvas><div id="ph"></div></div><div id="vel"><canvas id="vc"></canvas></div></div>
 </main>
 <p id="sfl"></p><p id="msg"></p>
-<p>Click to add a note (drag sideways to set its length). Drag to move, right-click or Delete to remove. Space plays.</p>
+<p>Click to add a note (drag sideways for length). Shift+drag selects; Ctrl+C, V and D copy, paste and duplicate. Space plays.</p>
 <script>
 const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"]/g,c=>'&#'+c.charCodeAt(0)+';'),
 COL=['#ff6b4a','#2ec4d6','#7bd05b','#c77dff','#ffb703','#4d8bff','#ff6fa5','#2bd3a0'],
 BI=[['Sine','sine'],['Triangle','triangle'],['Saw','sawtooth'],['Square','square']].map(([name,osc],i)=>({name,osc,bank:0,prog:i})),
 PMIN=24,PMAX=108,RH=12,PPB=48,PAD=34,cv=$('#cv'),ph=$('#ph'),roll=$('#roll');
-let ctx,master,sfs=[],tracks=[],sel=0,bpm=110,bars=4,snap=.25,lastLen=.5,lastVel=100,vdrag=0,ts=[4,4],loop=true,playing=false,sched=false,cursor=0,cursorTime=0,endAt=0,timer,drag=null,selNote=null;
-const bb=()=>ts[0]*4/ts[1],onM=(b,m)=>Math.abs(b/m-Math.round(b/m))<1e-6,msg=s=>$('#msg').textContent=s||'',presets=t=>t.sf<0?BI:sfs[t.sf].presets,inR=(r,k)=>!r||(k>=r[0]&&k<=r[1]),
+let ctx,master,sfs=[],tracks=[],sel=0,bpm=110,bars=4,snap=.25,lastLen=.5,lastVel=100,vdrag=0,ts=[4,4],loop=true,playing=false,sched=false,cursor=0,cursorTime=0,endAt=0,timer,drag=null,selNote=null,ns=new Set(),cur=null,clip=null,mode='draw',marq=null,hov=-1;
+const NM=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'],noteName=p=>NM[p%12]+(Math.floor(p/12)-1),bb=()=>ts[0]*4/ts[1],onM=(b,m)=>Math.abs(b/m-Math.round(b/m))<1e-6,msg=s=>$('#msg').textContent=s||'',presets=t=>t.sf<0?BI:sfs[t.sf].presets,inR=(r,k)=>!r||(k>=r[0]&&k<=r[1]),
 defPreset=t=>Math.max(0,presets(t).findIndex(p=>p.bank==0&&p.prog==0));
 
 /* ---------- SF2 parsing ---------- */
@@ -128,7 +142,7 @@ function stop(){clearInterval(timer);playing=sched=false;movePh(0);$('#play').te
 
 /* ---------- UI ---------- */
 function mk(i,notes=[]){const t={color:COL[i%8],sf:-1,pi:0,vol:.8,pan:0,mute:0,solo:0,notes};tracks.push(t);if(ctx)wire(t);return t}
-function ui(){
+function ui(){ns=new Set([...ns].filter(n=>tracks[sel].notes.includes(n)));stat();
  $('#tracks').innerHTML=tracks.map((t,i)=>`<div class="tr${i==sel?' on':''}" data-i="${i}"><i style="background:${t.color}"></i><span>${esc(t.want?t.want.sf+' (not loaded)':presets(t)[t.pi]?.name||'No instrument')}</span><button data-a="m" class="${t.mute?'x':''}" title="Mute">M</button><button data-a="s" class="${t.solo?'x':''}" title="Solo">S</button><button data-a="d" title="Remove track" aria-label="Remove track">×</button></div>`).join('');
  const t=tracks[sel];
  $('#ed').innerHTML=`<label>Soundfont<select id="sfs"><option value="-1"${t.sf<0?' selected':''}>Built-in synth</option>${sfs.map((s,i)=>`<option value="${i}"${t.sf==i?' selected':''}>${esc(s.name)}</option>`).join('')}</select></label>
@@ -155,8 +169,12 @@ $('#snap').onchange=e=>{snap=+e.target.value;draw()};
 $('#loop').onchange=e=>loop=e.target.checked;
 $('#tn').onchange=$('#td').onchange=()=>{stop();ts=[Math.min(16,Math.max(1,+$('#tn').value||4)),+$('#td').value];$('#tn').value=ts[0];draw()};
 $('#play').onclick=()=>playing?stop():play();
-document.onkeydown=e=>{if(e.target.matches('input,select,button'))return;
- if(e.code=='Space'){e.preventDefault();$('#play').click()}else if((e.key=='Delete'||e.key=='Backspace')&&selNote)del(selNote)};
+document.onkeydown=e=>{if(e.target.matches('input,select'))return;if(e.target.matches('button'))e.target.blur();const m=e.ctrlKey||e.metaKey,k=e.key.toLowerCase();
+ if(e.code=='Space'){e.preventDefault();$('#play').click()}
+ else if(m&&k=='c')cpy();else if(m&&k=='x'){cpy();rm()}else if(m&&k=='v'){e.preventDefault();pst()}
+ else if(m&&k=='d'){e.preventDefault();dup()}else if(m&&k=='a'){e.preventDefault();selAll()}
+ else if(k=='delete'||k=='backspace')rm();else if(k=='escape'){ns=new Set();stat();draw()}
+ else if(k.startsWith('arrow')&&sels().length){e.preventDefault();const s=e.shiftKey,[ds,dp]={arrowleft:[-snap,0],arrowright:[snap,0],arrowup:[0,s?12:1],arrowdown:[0,s?-12:-1]}[k];nudge(ds,dp)}};
 
 /* ---------- save / open ---------- */
 /* soundfont cache (IndexedDB) so projects can find their soundfonts again */
@@ -216,27 +234,56 @@ function draw(){const cs=getComputedStyle(document.documentElement),c=n=>cs.getP
  cv.width=W*dpr;cv.height=H*dpr;cv.style.width=W+'px';cv.style.height=H+'px';ph.style.height=H+'px';g.scale(dpr,dpr);g.font='10px system-ui';
  for(let p=PMAX;p>=PMIN;p--){const y=(PMAX-p)*RH,k=[1,3,6,8,10].includes(p%12);
   g.fillStyle=k?c('--k2'):c('--k1');g.fillRect(PAD,y,W-PAD,RH);
-  g.fillStyle=k?'#2a2540':'#f3f1fa';g.fillRect(0,y,PAD,RH-1);
-  if(p%12==0){g.fillStyle=c('--mut');g.fillText('C'+(p/12-1),4,y+9)}}
+  g.fillStyle=p==hov?c('--ac'):k?'#000':'#fff';g.fillRect(0,y,PAD,RH-1);
+  if(p%12==0){g.fillStyle=p==hov?'#000':'#555';g.fillText('C'+(p/12-1),4,y+9)}}
  g.strokeStyle=c('--ln');
  const L=bars*bb();for(let i=0;i<=L/snap+1e-6;i++){const b=i*snap;g.globalAlpha=onM(b,4/ts[1])?.7:.3;g.lineWidth=1;g.beginPath();g.moveTo(PAD+b*PPB+.5,0);g.lineTo(PAD+b*PPB+.5,H);g.stroke()}
  g.lineWidth=2;g.globalAlpha=1;for(let k=0;k<=bars;k++){const x=PAD+k*bb()*PPB+.5;g.beginPath();g.moveTo(x,0);g.lineTo(x,H);g.stroke()}
  tracks.map((t,i)=>i).filter(i=>i!=sel).concat(sel).forEach(i=>{const t=tracks[i],ga=i==sel?1:.22;
   t.notes.forEach(n=>{const x=PAD+n.s*PPB,y=(PMAX-n.p)*RH+1,w=Math.max(3,n.d*PPB-1);g.globalAlpha=ga*(.35+.65*n.v/127);g.fillStyle=t.color;g.fillRect(x,y,w,RH-2);g.globalAlpha=ga;
-   if(n==selNote){g.strokeStyle=c('--ink');g.lineWidth=2;g.strokeRect(x,y,w,RH-2)}})});
- g.globalAlpha=1;drawVel()}
+   if(ns.has(n)){g.strokeStyle=c('--ink');g.lineWidth=2;g.strokeRect(x,y,w,RH-2)}})});
+ g.globalAlpha=1;if(marq){const mx=Math.min(marq.x0,marq.x1)+.5,my=Math.min(marq.y0,marq.y1)+.5,mw=Math.abs(marq.x1-marq.x0),mh=Math.abs(marq.y1-marq.y0);g.fillStyle=c('--ac');g.globalAlpha=.15;g.fillRect(mx,my,mw,mh);g.globalAlpha=1;g.strokeStyle=c('--ac');g.lineWidth=1;g.strokeRect(mx,my,mw,mh)}drawVel()}
 const pos=e=>{const r=cv.getBoundingClientRect(),x=e.clientX-r.left;return[(x-PAD)/PPB,Math.min(PMAX,Math.max(PMIN,PMAX-Math.floor((e.clientY-r.top)/RH))),x]},
 inEdge=(n,x)=>{const w=n.d*PPB;return x>PAD+n.s*PPB+w-Math.min(Math.max(8,w*.3),w/2,20)},
 hit=(b,p)=>tracks[sel].notes.find(n=>n.p==p&&b>=n.s&&b<n.s+n.d),
-del=n=>{tracks[sel].notes=tracks[sel].notes.filter(x=>x!=n);selNote=null;draw()};
-cv.onpointerdown=e=>{if(e.button)return;const[b,p,x]=pos(e);if(x<PAD)return;ensure();const t=tracks[sel];let n=hit(b,p);const nw=!n;
- if(!n){n={p,s:Math.max(0,Math.floor(b/snap+1e-6)*snap),d:lastLen,v:lastVel};t.notes.push(n);preview(t,p,lastVel)}
- selNote=n;const r=!nw&&inEdge(n,x);drag={n,nw,r,x0:x,dx:r?b-n.s-n.d:b-n.s};cv.setPointerCapture(e.pointerId);draw()};
-cv.onpointermove=e=>{const[b,p,x]=pos(e);if(!drag){const m=x>=PAD&&hit(b,p);cv.style.cursor=m?inEdge(m,x)?'ew-resize':'move':'';return}const n=drag.n;
- if(drag.r)n.d=lastLen=Math.max(snap,Math.round((b-drag.dx-n.s)/snap)*snap);else if(drag.nw){if(Math.abs(x-drag.x0)>4)n.d=lastLen=Math.max(snap,Math.ceil((b-n.s)/snap-1e-6)*snap)}
- else{n.s=Math.max(0,Math.round((b-drag.dx)/snap)*snap);if(p!=n.p){n.p=p;preview(tracks[sel],p)}}draw()};
-cv.onpointerup=cv.onpointercancel=()=>drag=null;
-cv.oncontextmenu=e=>{e.preventDefault();const[b,p]=pos(e),n=hit(b,p);if(n)del(n)};
+T=()=>tracks[sel],
+sels=()=>T().notes.filter(n=>ns.has(n)),
+stat=()=>{const S=sels();$('#rd').textContent=S.length>1?S.length+' notes':S.length?noteName(S[0].p):'–'},
+put=(src,at)=>{const t=T(),a=Math.min(...src.map(n=>n.s)),z=Math.max(...src.map(n=>n.s+n.d)),c=src.map(n=>({...n,s:n.s-a+at}));
+ t.notes.push(...c);ns=new Set(c);cur=at+Math.ceil((z-a)/bb()-1e-6)*bb();
+ const need=Math.ceil(cur/bb()-1e-6);if(need>bars){bars=Math.min(64,need);$('#bars').value=bars}stat();draw()},
+next=S=>{const a=Math.min(...S.map(n=>n.s)),z=Math.max(...S.map(n=>n.s+n.d));return a+Math.max(1,Math.ceil((z-a)/bb()-1e-6))*bb()},
+cpy=()=>{const S=sels();if(S.length)clip=S.map(n=>({...n}))},
+dup=()=>{const S=sels();if(S.length)put(S,next(S))},
+pst=()=>{if(clip)put(clip,cur??next(clip))},
+rm=()=>{if(!sels().length)return;T().notes=T().notes.filter(n=>!ns.has(n));ns=new Set();stat();draw()},
+selAll=()=>{ns=new Set(T().notes);stat();draw()},
+nudge=(ds,dp)=>{const S=sels();if(!S.length||S.some(n=>n.s+ds<0||n.p+dp<PMIN||n.p+dp>PMAX))return;S.forEach(n=>{n.s+=ds;n.p+=dp});if(dp)preview(T(),S[0].p);stat();draw()};
+cv.onpointerdown=e=>{if(e.button)return;const[b,p,x]=pos(e);if(x<PAD)return;ensure();const t=T(),y=e.clientY-cv.getBoundingClientRect().top,add=e.shiftKey||e.ctrlKey||e.metaKey;
+ let n=hit(b,p);const nw=!n;cur=Math.max(0,Math.floor(b/snap+1e-6)*snap);cv.setPointerCapture(e.pointerId);
+ if(nw&&(mode=='sel'||e.shiftKey)){marq={x0:x,y0:y,x1:x,y1:y};drag={q:1,base:add?new Set(ns):new Set()};ns=new Set(drag.base);stat();draw();return}
+ if(n&&add){ns.has(n)?ns.delete(n):ns.add(n);stat();draw();return}
+ if(nw){n={p,s:cur,d:lastLen,v:lastVel};t.notes.push(n);ns=new Set([n]);preview(t,p,lastVel)}else if(!ns.has(n))ns=new Set([n]);
+ const r=!nw&&inEdge(n,x);
+ if(e.altKey&&!nw){const old=[...ns],cp=old.map(m=>({...m}));n=cp[old.indexOf(n)];t.notes.push(...cp);ns=new Set(cp)}
+ drag={n,nw,r,x0:x,p0:p,dp:0,os:n.s,od:n.d,dx:r?b-n.s-n.d:b-n.s,o:[...ns].map(m=>({m,s:m.s,p:m.p,d:m.d}))};
+ $('#rd').textContent=noteName(n.p);draw()};
+cv.onpointermove=e=>{const[b,p,x]=pos(e),y=e.clientY-cv.getBoundingClientRect().top;
+ if(!drag){const m=x>=PAD&&hit(b,p);cv.style.cursor=m?inEdge(m,x)?'ew-resize':'move':mode=='sel'?'crosshair':'';if(x>=PAD&&p!=hov){hov=p;$('#rd').textContent=noteName(p);draw()}return}
+ if(drag.q){marq.x1=x;marq.y1=y;const a=Math.min(marq.x0,x),z=Math.max(marq.x0,x),c=Math.min(marq.y0,y),d=Math.max(marq.y0,y);
+  ns=new Set(drag.base);T().notes.forEach(n=>{const nx=PAD+n.s*PPB,ny=(PMAX-n.p)*RH;if(nx<z&&nx+n.d*PPB>a&&ny<d&&ny+RH>c)ns.add(n)});stat();draw();return}
+ const n=drag.n,O=drag.o;
+ if(drag.nw){if(Math.abs(x-drag.x0)>4)n.d=lastLen=Math.max(snap,Math.ceil((b-n.s)/snap-1e-6)*snap)}
+ else if(drag.r){const dd=Math.max(snap,Math.round((b-drag.dx-drag.os)/snap)*snap)-drag.od;O.forEach(o=>{o.m.d=Math.max(snap,o.d+dd)});lastLen=n.d}
+ else{const ds=Math.max(-Math.min(...O.map(o=>o.s)),Math.round((b-drag.dx)/snap)*snap-drag.os),ps=O.map(o=>o.p),dp=Math.max(PMIN-Math.min(...ps),Math.min(PMAX-Math.max(...ps),p-drag.p0));
+  O.forEach(o=>{o.m.s=o.s+ds;o.m.p=o.p+dp});if(dp!=drag.dp){drag.dp=dp;preview(T(),n.p)}}
+ $('#rd').textContent=noteName(n.p)+(O.length>1?' ×'+O.length:'');draw()};
+cv.onpointerup=cv.onpointercancel=()=>{if(drag&&drag.q)marq=null;drag=null;stat();draw()};
+cv.onpointerleave=()=>{if(!drag&&hov>=0){hov=-1;stat();draw()}};
+cv.oncontextmenu=e=>{e.preventDefault();const[b,p]=pos(e),n=hit(b,p);if(n){if(!ns.has(n))ns=new Set([n]);rm()}};
+$('#tb').onclick=e=>{const k=e.target.dataset.k,id=e.target.id;
+ if(id=='mDraw'||id=='mSel'){mode=id=='mSel'?'sel':'draw';$('#mDraw').classList.toggle('on',mode=='draw');$('#mSel').classList.toggle('on',mode=='sel');return}
+ ({all:selAll,copy:cpy,cut:()=>{cpy();rm()},paste:pst,dup,del:rm})[k]?.()};
 
 /* ---------- velocity lane ---------- */
 const vc=$('#vc'),vel=$('#vel');
@@ -245,12 +292,12 @@ function drawVel(){const cs=getComputedStyle(document.documentElement),c=n=>cs.g
  g.fillStyle=c('--k1');g.fillRect(PAD,0,W-PAD,H);g.strokeStyle=c('--ln');g.fillStyle=c('--mut');g.font='10px system-ui';g.fillText('Vel',4,12);
  [.25,.5,.75].forEach(f=>{g.beginPath();g.moveTo(PAD,Math.round(H*f)+.5);g.lineTo(W,Math.round(H*f)+.5);g.stroke()});
  for(let b=0;b<=bars;b++){g.beginPath();g.moveTo(PAD+b*bb()*PPB+.5,0);g.lineTo(PAD+b*bb()*PPB+.5,H);g.stroke()}
- t.notes.forEach(n=>{const x=PAD+n.s*PPB,h=n.v/127*(H-6);g.fillStyle=t.color;g.fillRect(x,H-h,4,h);g.fillStyle=n==selNote?c('--ink'):t.color;g.fillRect(x-2,H-h,8,3)});
+ t.notes.forEach(n=>{const x=PAD+n.s*PPB,h=n.v/127*(H-6);g.fillStyle=t.color;g.fillRect(x,H-h,4,h);g.fillStyle=ns.has(n)?c('--ink'):t.color;g.fillRect(x-2,H-h,8,3)});
  vel.style.marginRight=(roll.offsetWidth-roll.clientWidth)+'px'}
 const velAt=e=>{const r=vc.getBoundingClientRect(),x=e.clientX-r.left,v=Math.max(1,Math.min(127,Math.round((1-(e.clientY-r.top)/72)*127)));
- let h=tracks[sel].notes.filter(n=>Math.abs(PAD+n.s*PPB+2-x)<=5);if(h.includes(selNote))h=[selNote];
+ let h=tracks[sel].notes.filter(n=>Math.abs(PAD+n.s*PPB+2-x)<=5);if(h.some(n=>ns.has(n)))h=h.filter(n=>ns.has(n));
  h.forEach(n=>n.v=v);if(h.length)lastVel=v;return[h,v]};
-vc.onpointerdown=e=>{if(e.button)return;ensure();vdrag=1;vc.setPointerCapture(e.pointerId);const[h,v]=velAt(e);if(h.length==1)selNote=h[0];if(h.length)preview(tracks[sel],h[0].p,v);draw()};
+vc.onpointerdown=e=>{if(e.button)return;ensure();vdrag=1;vc.setPointerCapture(e.pointerId);const[h,v]=velAt(e);if(h.length==1&&!ns.has(h[0])){ns=new Set(h);stat()}if(h.length)preview(tracks[sel],h[0].p,v);draw()};
 vc.onpointermove=e=>{if(vdrag){velAt(e);draw()}};
 vc.onpointerup=vc.onpointercancel=()=>vdrag=0;
 roll.onscroll=()=>vel.scrollLeft=roll.scrollLeft;
