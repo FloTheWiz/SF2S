@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SF2 Sequencer</title>
+<style>
+:root{--bg:#ecebf3;--pn:#fff;--ink:#1d1a2b;--mut:#6c6882;--ln:#d6d3e4;--ac:#e8a317;--k1:#f6f5fb;--k2:#e4e2ef;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1a1727;--pn:#252136;--ink:#ece9f7;--mut:#9892b3;--ln:#383350;--k1:#201c30;--k2:#171424;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#1a1727;--pn:#252136;--ink:#ece9f7;--mut:#9892b3;--ln:#383350;--k1:#201c30;--k2:#171424;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.4 "Avenir Next","Segoe UI",system-ui,sans-serif}
+header{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 14px;background:var(--pn);border-bottom:1px solid var(--ln)}
+header label{display:flex;gap:6px;align-items:center;color:var(--mut)}
+.sp{flex:1}
+button,select,input[type=number]{font:inherit;color:var(--ink);background:var(--k1);border:1px solid var(--ln);border-radius:6px;padding:5px 10px}
+button{cursor:pointer}button:hover{border-color:var(--mut)}
+:is(button,select,input):focus-visible{outline:2px solid var(--ac);outline-offset:1px}
+#play{background:var(--ac);border-color:var(--ac);color:#1d1a2b;font-weight:600;min-width:72px}
+input[type=number]{width:64px}
+#tn{width:52px}
+#pname{font:inherit;font-weight:600;font-size:15px;width:190px;color:var(--ink);background:transparent;border:1px solid transparent;border-radius:6px;padding:5px 8px}
+#pname:hover,#pname:focus{border-color:var(--ln);background:var(--k1)}
+main{display:grid;grid-template-columns:270px minmax(0,1fr);gap:12px;padding:12px 14px}
+aside{display:flex;flex-direction:column;gap:10px;min-width:0}
+.tr{display:flex;align-items:center;gap:6px;padding:6px 8px;border:1px solid var(--ln);border-radius:6px;background:var(--pn);cursor:pointer;margin-bottom:4px}
+.tr.on{border-color:var(--ink)}
+.tr i{width:10px;height:10px;border-radius:50%;flex:none}
+.tr span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tr button{padding:1px 7px}.tr .x{background:var(--ac);color:#1d1a2b;border-color:var(--ac)}
+#ed{display:flex;flex-direction:column;gap:8px;background:var(--pn);border:1px solid var(--ln);border-radius:8px;padding:10px}
+#ed label{display:flex;flex-direction:column;gap:3px;color:var(--mut)}
+#ed select{width:100%}
+#roll{position:relative;overflow:auto;max-height:68vh;border:1px solid var(--ln);border-radius:8px;background:var(--pn)}
+canvas{display:block}
+.rc{min-width:0}
+#vel{overflow:hidden;margin-top:8px;border:1px solid var(--ln);border-radius:8px;background:var(--pn)}
+#ph{position:absolute;top:0;left:0;width:2px;background:var(--ac);pointer-events:none}
+p{color:var(--mut);margin:0 14px 10px;font-size:13px}
+@media(max-width:800px){main{grid-template-columns:1fr}}
+</style></head><body>
+<header>
+<input id="pname" value="Untitled project" maxlength="60" aria-label="Project name" spellcheck="false"><button id="play">Play</button>
+<label>Tempo <input id="bpm" type="number" min="40" max="240" value="110"></label>
+<label>Bars <input id="bars" type="number" min="1" max="64" value="4"></label>
+<label>Time <input id="tn" type="number" min="1" max="16" value="4"><span>/</span><select id="td"><option>2</option><option selected>4</option><option>8</option><option>16</option></select></label>
+<label>Grid <select id="snap"><option value="1">1/4</option><option value=".5">1/8</option><option value=".25" selected>1/16</option></select></label>
+<label><input id="loop" type="checkbox" checked> Loop</label>
+<span class="sp"></span>
+<button id="sfb">Load SF2…</button><input id="file" type="file" accept=".sf2" multiple hidden>
+<button id="sv">Save project</button><button id="ld">Open project</button><input id="jf" type="file" hidden><button id="xw">Export WAV</button><button id="xm">Export MP3</button>
+</header>
+<main>
+<aside><div id="tracks"></div><button id="add">Add track</button><div id="ed"></div></aside>
+<div class="rc"><div id="roll"><canvas id="cv"></canvas><div id="ph"></div></div><div id="vel"><canvas id="vc"></canvas></div></div>
+</main>
+<p id="sfl"></p><p id="msg"></p>
+<p>Click to add a note (drag sideways to set its length). Drag to move, right-click or Delete to remove. Space plays.</p>
+<script>
+const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"]/g,c=>'&#'+c.charCodeAt(0)+';'),
+COL=['#ff6b4a','#2ec4d6','#7bd05b','#c77dff','#ffb703','#4d8bff','#ff6fa5','#2bd3a0'],
+BI=[['Sine','sine'],['Triangle','triangle'],['Saw','sawtooth'],['Square','square']].map(([name,osc],i)=>({name,osc,bank:0,prog:i})),
+PMIN=24,PMAX=108,RH=12,PPB=48,PAD=34,cv=$('#cv'),ph=$('#ph'),roll=$('#roll');
+let ctx,master,sfs=[],tracks=[],sel=0,bpm=110,bars=4,snap=.25,lastLen=.5,lastVel=100,vdrag=0,ts=[4,4],loop=true,playing=false,sched=false,cursor=0,cursorTime=0,endAt=0,timer,drag=null,selNote=null;
+const bb=()=>ts[0]*4/ts[1],onM=(b,m)=>Math.abs(b/m-Math.round(b/m))<1e-6,msg=s=>$('#msg').textContent=s||'',presets=t=>t.sf<0?BI:sfs[t.sf].presets,inR=(r,k)=>!r||(k>=r[0]&&k<=r[1]),
+defPreset=t=>Math.max(0,presets(t).findIndex(p=>p.bank==0&&p.prog==0));
+
+/* ---------- SF2 parsing ---------- */
+function parseSF2(buf){
+ const dv=new DataView(buf),ck={},str=(o,n)=>{let s='';for(let i=0;i<n;i++){const c=dv.getUint8(o+i);if(!c)break;s+=String.fromCharCode(c)}return s};
+ if(str(0,4)!=='RIFF'||str(8,4)!=='sfbk')throw Error('not an SF2 file');
+ const walk=(o,e)=>{while(o+8<=e){const id=str(o,4),n=dv.getUint32(o+4,true);if(id==='LIST'){if(str(o+8,4)!=='INFO')walk(o+12,o+8+n)}else ck[id]=[o+8,n];o+=8+n+(n&1)}};
+ walk(12,buf.byteLength);
+ if(!ck.smpl||!ck.phdr)throw Error('no sample data (compressed SF3 is not supported)');
+ const u16=o=>dv.getUint16(o,true),u32=o=>dv.getUint32(o,true),
+ rec=(id,sz,f)=>{const[o,n]=ck[id],r=[];for(let i=0;i+sz<=n;i+=sz)r.push(f(o+i));return r},
+ gen=id=>rec(id,4,o=>[u16(o),dv.getUint8(o+2),dv.getUint8(o+3),dv.getInt16(o+2,true)]),
+ hdr=rec('phdr',38,o=>({name:str(o,20),prog:u16(o+20),bank:u16(o+22),bag:u16(o+24)})),
+ pb=rec('pbag',4,u16),ib=rec('ibag',4,u16),pg=gen('pgen'),ig=gen('igen'),inst=rec('inst',22,o=>u16(o+20)),
+ zs=(b0,b1,bag,g,key)=>{let gl={},l=[];for(let b=b0;b<b1;b++){const z={};for(let i=bag[b];i<bag[b+1];i++){const[op,lo,hi,v]=g[i];z[op]=op==43||op==44?[lo,hi]:v}
+  if(z[key]===undefined){if(b==b0)gl=z}else l.push({...gl,...z})}return l},
+ I=inst.slice(0,-1).map((b,i)=>zs(b,inst[i+1],ib,ig,53)),
+ pr=hdr.slice(0,-1).map((h,i)=>({name:h.name,bank:h.bank,prog:h.prog,z:zs(h.bag,hdr[i+1].bag,pb,pg,41)})).sort((a,b)=>a.bank-b.bank||a.prog-b.prog),
+ shdr=rec('shdr',46,o=>({start:u32(o+20),end:u32(o+24),sl:u32(o+28),el:u32(o+32),rate:u32(o+36),pitch:dv.getUint8(o+40),corr:dv.getInt8(o+41)}));
+ return{presets:pr,I,shdr,pcm:new Int16Array(buf,ck.smpl[0],ck.smpl[1]>>1),bufs:{}};
+}
+
+/* ---------- synth ---------- */
+function ensure(){if(ctx){ctx.resume();return}
+ ctx=new AudioContext();const c=ctx.createDynamicsCompressor();master=ctx.createGain();master.gain.value=.8;master.connect(c);c.connect(ctx.destination);tracks.forEach(wire)}
+function wire(t){t.out=ctx.createGain();t.pn=ctx.createStereoPanner();t.out.connect(t.pn);t.pn.connect(master);t.out.gain.value=t.vol;t.pn.pan.value=t.pan}
+function sbuf(sf,i){if(sf.bufs[i])return sf.bufs[i];const s=sf.shdr[i],n=Math.max(s.end-s.start,1),b=ctx.createBuffer(1,n,s.rate),d=b.getChannelData(0);
+ for(let j=0;j<n;j++)d[j]=sf.pcm[s.start+j]/32768;return sf.bufs[i]=b}
+function voice(sf,pz,iz,drum,p,v,when,dur,out){
+ const G=(o,d)=>(iz[o]??d)+(pz[o]||0),tc=x=>2**(x/1200),s=sf.shdr[iz[53]];if(!s)return;
+ const src=ctx.createBufferSource();src.buffer=sbuf(sf,iz[53]);
+ const root=iz[58]>=0?iz[58]:s.pitch;
+ src.playbackRate.value=2**(((p-root)*G(56,100)+G(51,0)*100+G(52,0)+s.corr)/1200);
+ if((iz[54]&1)&&s.el>s.sl){src.loop=true;src.loopStart=(s.sl-s.start)/s.rate;src.loopEnd=(s.el-s.start)/s.rate}
+ if(drum)dur=src.buffer.duration/src.playbackRate.value;
+ const g=ctx.createGain(),pk=10**(-Math.max(0,G(48,0))/200)*(v/127)**2,at=tc(G(34,-12000)),hd=tc(G(35,-12000)),dc=tc(G(36,-12000)),
+ su=10**(-Math.max(0,G(37,0))/200),rl=Math.max(Math.min(tc(G(38,-12000)),8),.03),e=when+Math.max(dur,at+.01);
+ g.gain.setValueAtTime(0,when);g.gain.linearRampToValueAtTime(pk,when+at);g.gain.setValueAtTime(pk,when+at+hd);
+ g.gain.setTargetAtTime(pk*su,when+at+hd,Math.max(dc,.005)/3);g.gain.setTargetAtTime(0,e,rl/3);
+ const pn=ctx.createStereoPanner();pn.pan.value=Math.max(-1,Math.min(1,G(17,0)/500));
+ src.connect(g);g.connect(pn);pn.connect(out);src.start(when);src.stop(e+rl+.1);
+}
+function noteOn(t,pr,p,v,when,dur){
+ if(pr.osc){const o=ctx.createOscillator(),g=ctx.createGain(),pk=.3*(v/127)**2;o.type=pr.osc;o.frequency.value=440*2**((p-69)/12);
+  g.gain.setValueAtTime(0,when);g.gain.linearRampToValueAtTime(pk,when+.01);g.gain.setTargetAtTime(0,when+dur,.06);o.connect(g);g.connect(t.out);o.start(when);o.stop(when+dur+.5);return}
+ const sf=sfs[t.sf];
+ for(const pz of pr.z){if(!inR(pz[43],p)||!inR(pz[44],v))continue;
+  for(const iz of sf.I[pz[41]]||[])if(inR(iz[43],p)&&inR(iz[44],v))voice(sf,pz,iz,pr.bank==128,p,v,when,dur,t.out)}}
+function preview(t,p,v=100){ensure();const pr=presets(t)[t.pi];if(pr)noteOn(t,pr,p,v,ctx.currentTime+.01,.35)}
+
+/* ---------- transport ---------- */
+function tick(){const len=bars*bb(),h=ctx.currentTime+.15,bps=bpm/60,solo=tracks.some(x=>x.solo);
+ while(sched&&cursorTime<h){
+  const end=Math.min(len,cursor+Math.max((h-cursorTime)*bps,.001));
+  tracks.forEach(t=>{if(t.mute||(solo&&!t.solo))return;const pr=presets(t)[t.pi];if(!pr)return;
+   t.notes.forEach(n=>{if(n.s>=cursor&&n.s<end)noteOn(t,pr,n.p,n.v,cursorTime+(n.s-cursor)/bps,n.d/bps)})});
+  cursorTime+=(end-cursor)/bps;cursor=end;
+  if(cursor>=len){if(loop)cursor=0;else{sched=false;endAt=cursorTime+.6}}}}
+function movePh(b){const x=PAD+b*PPB;ph.style.transform=`translateX(${x}px)`;
+ if(playing&&(x<roll.scrollLeft||x>roll.scrollLeft+roll.clientWidth-30))roll.scrollLeft=Math.max(0,x-PAD)}
+function frame(){if(!playing)return;if(!sched&&ctx.currentTime>=endAt)return stop();
+ const len=bars*bb();let b=cursor-(cursorTime-ctx.currentTime)*bpm/60;if(b<0)b=loop?b+len:0;movePh(Math.min(b,len));requestAnimationFrame(frame)}
+function play(){ensure();playing=sched=true;cursor=0;cursorTime=ctx.currentTime+.08;timer=setInterval(tick,25);tick();frame();$('#play').textContent='Stop'}
+function stop(){clearInterval(timer);playing=sched=false;movePh(0);$('#play').textContent='Play'}
+
+/* ---------- UI ---------- */
+function mk(i,notes=[]){const t={color:COL[i%8],sf:-1,pi:0,vol:.8,pan:0,mute:0,solo:0,notes};tracks.push(t);if(ctx)wire(t);return t}
+function ui(){
+ $('#tracks').innerHTML=tracks.map((t,i)=>`<div class="tr${i==sel?' on':''}" data-i="${i}"><i style="background:${t.color}"></i><span>${esc(t.want?t.want.sf+' (not loaded)':presets(t)[t.pi]?.name||'No instrument')}</span><button data-a="m" class="${t.mute?'x':''}" title="Mute">M</button><button data-a="s" class="${t.solo?'x':''}" title="Solo">S</button><button data-a="d" title="Remove track" aria-label="Remove track">×</button></div>`).join('');
+ const t=tracks[sel];
+ $('#ed').innerHTML=`<label>Soundfont<select id="sfs"><option value="-1"${t.sf<0?' selected':''}>Built-in synth</option>${sfs.map((s,i)=>`<option value="${i}"${t.sf==i?' selected':''}>${esc(s.name)}</option>`).join('')}</select></label>
+<label>Instrument<select id="prs">${presets(t).map((p,i)=>`<option value="${i}"${t.pi==i?' selected':''}>${p.osc?'':p.bank+':'+p.prog+' '}${esc(p.name)}</option>`).join('')}</select></label>
+<label>Volume<input id="vol" type="range" min="0" max="1" step=".01" value="${t.vol}"></label>
+<label>Pan<input id="pan" type="range" min="-1" max="1" step=".01" value="${t.pan}"></label>`;
+ $('#sfl').textContent=sfs.length?'Soundfonts: '+sfs.map(s=>s.name).join(', '):'No soundfonts loaded. Use Load SF2 to add some.';
+ draw()}
+$('#tracks').onclick=e=>{const r=e.target.closest('.tr');if(!r)return;const i=+r.dataset.i,a=e.target.dataset.a,t=tracks[i];
+ if(a=='m')t.mute^=1;else if(a=='s')t.solo^=1;
+ else if(a=='d'){if(tracks.length<2)return;t.out?.disconnect();tracks.splice(i,1);sel=Math.max(0,Math.min(i<sel?sel-1:sel,tracks.length-1));selNote=null}
+ else{sel=i;selNote=null}ui()};
+$('#ed').oninput=e=>{const t=tracks[sel],id=e.target.id,v=+e.target.value;if(id=='sfs'||id=='prs')delete t.want;
+ if(id=='vol'){t.vol=v;if(t.out)t.out.gain.value=v}else if(id=='pan'){t.pan=v;if(t.pn)t.pn.pan.value=v}
+ else if(id=='sfs'){t.sf=v;t.pi=defPreset(t);ui();preview(t,60)}else if(id=='prs'){t.pi=v;ui();preview(t,60)}};
+$('#add').onclick=()=>{const t=mk(tracks.length);if(sfs.length){t.sf=sfs.length-1;t.pi=defPreset(t)}sel=tracks.length-1;selNote=null;ui()};
+$('#sfb').onclick=()=>$('#file').click();
+$('#file').onchange=async e=>{msg();const t=tracks[sel];let n=0;
+ for(const f of e.target.files){try{const b=await f.arrayBuffer(),nm=f.name.replace(/\.sf2$/i,'');if(addSF(nm,b)){n++;idbPut(nm,b)}}catch(x){msg(f.name+': '+x.message)}}
+ e.target.value='';if(n&&t.sf<0&&!t.want){t.sf=sfs.length-1;t.pi=defPreset(t)}ui()};
+$('#bpm').onchange=e=>bpm=Math.min(240,Math.max(40,+e.target.value||110));
+$('#bars').onchange=e=>{bars=Math.min(64,Math.max(1,+e.target.value||4));draw()};
+$('#snap').onchange=e=>{snap=+e.target.value;draw()};
+$('#loop').onchange=e=>loop=e.target.checked;
+$('#tn').onchange=$('#td').onchange=()=>{stop();ts=[Math.min(16,Math.max(1,+$('#tn').value||4)),+$('#td').value];$('#tn').value=ts[0];draw()};
+$('#play').onclick=()=>playing?stop():play();
+document.onkeydown=e=>{if(e.target.matches('input,select,button'))return;
+ if(e.code=='Space'){e.preventDefault();$('#play').click()}else if((e.key=='Delete'||e.key=='Backspace')&&selNote)del(selNote)};
+
+/* ---------- save / open ---------- */
+/* soundfont cache (IndexedDB) so projects can find their soundfonts again */
+const idb=()=>new Promise((ok,no)=>{const r=indexedDB.open('sf2seq',1);r.onupgradeneeded=()=>r.result.createObjectStore('sf');r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)});
+const idbPut=async(k,v)=>{try{(await idb()).transaction('sf','readwrite').objectStore('sf').put(v,k)}catch{}};
+const idbGet=async k=>{try{const d=await idb();return await new Promise(ok=>{const q=d.transaction('sf').objectStore('sf').get(k);q.onsuccess=()=>ok(q.result);q.onerror=()=>ok()})}catch{}};
+const resolve=s=>tracks.forEach(t=>{const w=t.want;if(w&&w.sf==s.name){t.sf=sfs.indexOf(s);t.pi=Math.max(0,presets(t).findIndex(p=>p.bank==w.bank&&p.prog==w.prog));delete t.want}});
+const addSF=(name,buf)=>{if(sfs.some(s=>s.name==name))return;const s=parseSF2(buf);s.name=name;sfs.push(s);resolve(s);return s};
+
+/* save / open project */
+const fname=()=>$('#pname').value.replace(/[<>:"|?*/]+/g,'').trim()||'sequence';
+const dl=async(name,make,local)=>{const hosted=!!window.claude,d=hosted&&await window.claude.use('downloads');if(hosted&&!d)return msg('Saving is not available in this view. Open the artifact on its own page, or run the downloaded .html file locally.');
+ try{const data=await make(!hosted);if(hosted){await d.save({filename:name,data});msg('Saved '+name)}else{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([data]));a.download=local;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),5000);msg('Saved '+local)}}catch(x){msg(x.code=='declined'?'':'Could not save: '+(x.code||x.message))}};
+$('#sv').onclick=()=>dl(fname()+'.json',()=>JSON.stringify({app:'sf2-sequencer',v:1,name:$('#pname').value,bpm,bars,ts,tracks:tracks.map(t=>{const w=t.want,p=presets(t)[t.pi]||{};
+ return{sf:w?w.sf:sfs[t.sf]?.name||null,bank:w?w.bank:p.bank,prog:w?w.prog:p.prog,vol:t.vol,pan:t.pan,mute:t.mute,solo:t.solo,notes:t.notes}})}),fname()+'.sf2s');
+$('#ld').onclick=()=>$('#jf').click();
+$('#jf').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(!f)return;msg();
+ try{const d=JSON.parse(await f.text());if(!Array.isArray(d.tracks))throw 0;stop();bpm=d.bpm||110;bars=d.bars||4;$('#bpm').value=bpm;$('#bars').value=bars;ts=Array.isArray(d.ts)?d.ts:[4,4];$('#tn').value=ts[0];$('#td').value=ts[1];$('#pname').value=d.name||f.name.split('.').slice(0,-1).join('.')||f.name;tracks.forEach(t=>t.out?.disconnect());tracks=[];
+  for(const x of d.tracks)if(x.sf&&!sfs.some(s=>s.name==x.sf)){const b=await idbGet(x.sf);if(b)try{addSF(x.sf,b)}catch{}}
+  d.tracks.forEach((x,i)=>{const t=mk(i,x.notes||[]);Object.assign(t,{vol:x.vol??.8,pan:x.pan||0,mute:x.mute||0,solo:x.solo||0,sf:sfs.findIndex(s=>s.name==x.sf)});
+   if(x.sf&&t.sf<0)t.want={sf:x.sf,bank:x.bank,prog:x.prog};
+   t.pi=Math.max(0,presets(t).findIndex(p=>p.bank==x.bank&&p.prog==x.prog));if(t.out){t.out.gain.value=t.vol;t.pn.pan.value=t.pan}});
+  sel=0;selNote=null;ui();const miss=[...new Set(tracks.filter(t=>t.want).map(t=>t.want.sf))];
+  if(miss.length)msg('Waiting for: '+miss.join(', ')+'. Load them with Load SF2… and the tracks will pick them up.')}catch(x){msg('Could not open that file.')}};
+
+/* audio export */
+function render(){ensure();stop();
+ const sr=44100,bt=bars*bb(),sec=60/bpm,oc=new OfflineAudioContext(2,Math.ceil((bt*sec+4)*sr),sr),oC=ctx,oM=master,old=tracks.map(t=>[t.out,t.pn]),solo=tracks.some(x=>x.solo);
+ try{ctx=oc;const c=oc.createDynamicsCompressor();master=oc.createGain();master.gain.value=.8;master.connect(c);c.connect(oc.destination);tracks.forEach(t=>wire(t));
+  tracks.forEach(t=>{const pr=presets(t)[t.pi];if(!pr||t.mute||(solo&&!t.solo))return;t.notes.forEach(n=>{if(n.s<bt)noteOn(t,pr,n.p,n.v,n.s*sec,n.d*sec)})})}
+ finally{ctx=oC;master=oM;tracks.forEach((t,i)=>{[t.out,t.pn]=old[i]})}
+ return oc.startRendering()}
+function wav(L,R,sr){const n=L.length,d=new DataView(new ArrayBuffer(44+n*4)),w=(o,s)=>[...s].forEach((c,i)=>d.setUint8(o+i,c.charCodeAt(0)));
+ w(0,'RIFF');d.setUint32(4,36+n*4,true);w(8,'WAVEfmt ');d.setUint32(16,16,true);d.setUint16(20,1,true);d.setUint16(22,2,true);d.setUint32(24,sr,true);d.setUint32(28,sr*4,true);d.setUint16(32,4,true);d.setUint16(34,16,true);w(36,'data');d.setUint32(40,n*4,true);
+ const q=x=>Math.round(Math.max(-1,Math.min(1,x))*32767);
+ for(let i=0,o=44;i<n;i++,o+=4){d.setInt16(o,q(L[i]),true);d.setInt16(o+2,q(R[i]),true)}return new Uint8Array(d.buffer)}
+function mp3(L,R,sr){const e=new lamejs.Mp3Encoder(2,sr,192),i16=a=>Int16Array.from(a,x=>Math.max(-1,Math.min(1,x))*32767),l=i16(L),r=i16(R),out=[];
+ for(let i=0;i<l.length;i+=1152){const b=e.encodeBuffer(l.subarray(i,i+1152),r.subarray(i,i+1152));if(b.length)out.push(b)}
+ const f=e.flush();if(f.length)out.push(f);const n=out.reduce((a,b)=>a+b.length,0),u=new Uint8Array(n);let o=0;out.forEach(b=>{u.set(b,o);o+=b.length});return u}
+function zip(files){const T=Array.from({length:256},(_,n)=>{let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;return c>>>0}),
+ crc=d=>{let c=-1;for(let i=0;i<d.length;i++)c=T[(c^d[i])&255]^(c>>>8);return(c^-1)>>>0},enc=new TextEncoder(),parts=[],cd=[];let off=0;
+ for(const f of files){const nm=enc.encode(f.name),c=crc(f.data),n=f.data.length,h=new DataView(new ArrayBuffer(30)),e=new DataView(new ArrayBuffer(46));
+  h.setUint32(0,0x04034b50,true);h.setUint16(4,20,true);h.setUint32(14,c,true);h.setUint32(18,n,true);h.setUint32(22,n,true);h.setUint16(26,nm.length,true);
+  e.setUint32(0,0x02014b50,true);e.setUint16(4,20,true);e.setUint16(6,20,true);e.setUint32(16,c,true);e.setUint32(20,n,true);e.setUint32(24,n,true);e.setUint16(28,nm.length,true);e.setUint32(42,off,true);
+  parts.push(new Uint8Array(h.buffer),nm,f.data);cd.push(new Uint8Array(e.buffer),nm);off+=30+nm.length+n}
+ const cs=cd.reduce((a,b)=>a+b.length,0),z=new DataView(new ArrayBuffer(22));z.setUint32(0,0x06054b50,true);z.setUint16(8,files.length,true);z.setUint16(10,files.length,true);z.setUint32(12,cs,true);z.setUint32(16,off,true);
+ return new Blob([...parts,...cd,new Uint8Array(z.buffer)])}
+const loadLame=()=>window.lamejs?0:new Promise((ok,no)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js';s.onload=ok;s.onerror=()=>no(Error('could not load the MP3 encoder'));document.head.append(s)});
+const bake=async(kind,raw)=>{msg('Rendering '+kind.toUpperCase()+'…');await new Promise(r=>setTimeout(r,30));const ab=await render(),L=ab.getChannelData(0),R=ab.getChannelData(1);
+ if(kind=='mp3'){msg('Encoding MP3…');await loadLame();await new Promise(r=>setTimeout(r,30))}
+ const bytes=kind=='wav'?wav(L,R,ab.sampleRate):mp3(L,R,ab.sampleRate);return raw?bytes:zip([{name:fname()+'.'+kind,data:bytes}])};
+$('#xw').onclick=()=>dl(fname()+'-wav.zip',raw=>bake('wav',raw),fname()+'.wav');
+$('#xm').onclick=()=>dl(fname()+'-mp3.zip',raw=>bake('mp3',raw),fname()+'.mp3');
+
+/* ---------- piano roll ---------- */
+function draw(){const cs=getComputedStyle(document.documentElement),c=n=>cs.getPropertyValue(n).trim(),W=PAD+bars*bb()*PPB,H=(PMAX-PMIN+1)*RH,dpr=devicePixelRatio||1,g=cv.getContext('2d');
+ cv.width=W*dpr;cv.height=H*dpr;cv.style.width=W+'px';cv.style.height=H+'px';ph.style.height=H+'px';g.scale(dpr,dpr);g.font='10px system-ui';
+ for(let p=PMAX;p>=PMIN;p--){const y=(PMAX-p)*RH,k=[1,3,6,8,10].includes(p%12);
+  g.fillStyle=k?c('--k2'):c('--k1');g.fillRect(PAD,y,W-PAD,RH);
+  g.fillStyle=k?'#2a2540':'#f3f1fa';g.fillRect(0,y,PAD,RH-1);
+  if(p%12==0){g.fillStyle=c('--mut');g.fillText('C'+(p/12-1),4,y+9)}}
+ g.strokeStyle=c('--ln');
+ const L=bars*bb();for(let i=0;i<=L/snap+1e-6;i++){const b=i*snap;g.globalAlpha=onM(b,4/ts[1])?.7:.3;g.lineWidth=1;g.beginPath();g.moveTo(PAD+b*PPB+.5,0);g.lineTo(PAD+b*PPB+.5,H);g.stroke()}
+ g.lineWidth=2;g.globalAlpha=1;for(let k=0;k<=bars;k++){const x=PAD+k*bb()*PPB+.5;g.beginPath();g.moveTo(x,0);g.lineTo(x,H);g.stroke()}
+ tracks.map((t,i)=>i).filter(i=>i!=sel).concat(sel).forEach(i=>{const t=tracks[i],ga=i==sel?1:.22;
+  t.notes.forEach(n=>{const x=PAD+n.s*PPB,y=(PMAX-n.p)*RH+1,w=Math.max(3,n.d*PPB-1);g.globalAlpha=ga*(.35+.65*n.v/127);g.fillStyle=t.color;g.fillRect(x,y,w,RH-2);g.globalAlpha=ga;
+   if(n==selNote){g.strokeStyle=c('--ink');g.lineWidth=2;g.strokeRect(x,y,w,RH-2)}})});
+ g.globalAlpha=1;drawVel()}
+const pos=e=>{const r=cv.getBoundingClientRect(),x=e.clientX-r.left;return[(x-PAD)/PPB,Math.min(PMAX,Math.max(PMIN,PMAX-Math.floor((e.clientY-r.top)/RH))),x]},
+inEdge=(n,x)=>{const w=n.d*PPB;return x>PAD+n.s*PPB+w-Math.min(Math.max(8,w*.3),w/2,20)},
+hit=(b,p)=>tracks[sel].notes.find(n=>n.p==p&&b>=n.s&&b<n.s+n.d),
+del=n=>{tracks[sel].notes=tracks[sel].notes.filter(x=>x!=n);selNote=null;draw()};
+cv.onpointerdown=e=>{if(e.button)return;const[b,p,x]=pos(e);if(x<PAD)return;ensure();const t=tracks[sel];let n=hit(b,p);const nw=!n;
+ if(!n){n={p,s:Math.max(0,Math.floor(b/snap+1e-6)*snap),d:lastLen,v:lastVel};t.notes.push(n);preview(t,p,lastVel)}
+ selNote=n;const r=!nw&&inEdge(n,x);drag={n,nw,r,x0:x,dx:r?b-n.s-n.d:b-n.s};cv.setPointerCapture(e.pointerId);draw()};
+cv.onpointermove=e=>{const[b,p,x]=pos(e);if(!drag){const m=x>=PAD&&hit(b,p);cv.style.cursor=m?inEdge(m,x)?'ew-resize':'move':'';return}const n=drag.n;
+ if(drag.r)n.d=lastLen=Math.max(snap,Math.round((b-drag.dx-n.s)/snap)*snap);else if(drag.nw){if(Math.abs(x-drag.x0)>4)n.d=lastLen=Math.max(snap,Math.ceil((b-n.s)/snap-1e-6)*snap)}
+ else{n.s=Math.max(0,Math.round((b-drag.dx)/snap)*snap);if(p!=n.p){n.p=p;preview(tracks[sel],p)}}draw()};
+cv.onpointerup=cv.onpointercancel=()=>drag=null;
+cv.oncontextmenu=e=>{e.preventDefault();const[b,p]=pos(e),n=hit(b,p);if(n)del(n)};
+
+/* ---------- velocity lane ---------- */
+const vc=$('#vc'),vel=$('#vel');
+function drawVel(){const cs=getComputedStyle(document.documentElement),c=n=>cs.getPropertyValue(n).trim(),W=PAD+bars*bb()*PPB,H=72,dpr=devicePixelRatio||1,g=vc.getContext('2d'),t=tracks[sel];
+ vc.width=W*dpr;vc.height=H*dpr;vc.style.width=W+'px';vc.style.height=H+'px';g.scale(dpr,dpr);
+ g.fillStyle=c('--k1');g.fillRect(PAD,0,W-PAD,H);g.strokeStyle=c('--ln');g.fillStyle=c('--mut');g.font='10px system-ui';g.fillText('Vel',4,12);
+ [.25,.5,.75].forEach(f=>{g.beginPath();g.moveTo(PAD,Math.round(H*f)+.5);g.lineTo(W,Math.round(H*f)+.5);g.stroke()});
+ for(let b=0;b<=bars;b++){g.beginPath();g.moveTo(PAD+b*bb()*PPB+.5,0);g.lineTo(PAD+b*bb()*PPB+.5,H);g.stroke()}
+ t.notes.forEach(n=>{const x=PAD+n.s*PPB,h=n.v/127*(H-6);g.fillStyle=t.color;g.fillRect(x,H-h,4,h);g.fillStyle=n==selNote?c('--ink'):t.color;g.fillRect(x-2,H-h,8,3)});
+ vel.style.marginRight=(roll.offsetWidth-roll.clientWidth)+'px'}
+const velAt=e=>{const r=vc.getBoundingClientRect(),x=e.clientX-r.left,v=Math.max(1,Math.min(127,Math.round((1-(e.clientY-r.top)/72)*127)));
+ let h=tracks[sel].notes.filter(n=>Math.abs(PAD+n.s*PPB+2-x)<=5);if(h.includes(selNote))h=[selNote];
+ h.forEach(n=>n.v=v);if(h.length)lastVel=v;return[h,v]};
+vc.onpointerdown=e=>{if(e.button)return;ensure();vdrag=1;vc.setPointerCapture(e.pointerId);const[h,v]=velAt(e);if(h.length==1)selNote=h[0];if(h.length)preview(tracks[sel],h[0].p,v);draw()};
+vc.onpointermove=e=>{if(vdrag){velAt(e);draw()}};
+vc.onpointerup=vc.onpointercancel=()=>vdrag=0;
+roll.onscroll=()=>vel.scrollLeft=roll.scrollLeft;
+
+/* ---------- starter pattern ---------- */
+const N=a=>a.map(([p,s,d=.5])=>({p,s,d,v:100}));
+mk(0,N([[57,0],[60,.5],[64,1],[69,1.5],[67,2],[64,2.5],[60,3],[55,3.5]]));
+mk(1,N([[45,0,1.5],[45,2,.5],[43,2.5,1.5]]));
+ui();roll.scrollTop=(PMAX-76)*RH;
+</script></body></html>
